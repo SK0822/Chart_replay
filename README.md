@@ -6,7 +6,8 @@ ChartReplay lets you go back in time and step through real historical price move
 
 Built with Flask + vanilla JavaScript and [lightweight-charts](https://github.com/tradingview/lightweight-charts). No build step, no API keys — historical data comes free from Yahoo Finance.
 
-> ⚠️ **Paper trading only.** This is an educational practice tool. It places no real orders and is not investment advice.
+> ⚠️ **Paper trading only.** Educational tool for practicing on historical data. Not investment advice. Backtest results do not predict future performance. It places no real orders and is not investment advice.
+
 
 ---
 
