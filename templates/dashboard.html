@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard — Chart Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;
+  --border:#30363d;--text:#e6edf3;--muted:#7d8590;
+  --green:#3fb950;--blue:#58a6ff;--orange:#d29922;
+  --red:#f85149;--purple:#bc8cff;
+  --green-bg:#0d2e0d;--red-bg:#2e0d0d;
+  --radius:6px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:46px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:4px}
+.nav-link:hover,.nav-link.active{background:var(--surface2);color:var(--text)}
+main{padding:20px 24px;max-width:1500px;margin:0 auto}
+.dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.dash-title{font-size:22px;font-weight:600}
+.dash-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.refresh-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 14px;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font)}
+.refresh-btn:hover{color:var(--text)}
+.sec-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stat-val{font-size:22px;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:4px;margin-bottom:4px;font-size:12px}
+.log-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.log-item:last-child{border:none}
+.log-time{color:var(--muted);font-family:var(--mono);font-size:11px;white-space:nowrap;min-width:145px}
+.log-icon{font-size:14px;flex-shrink:0}
+.log-body{flex:1}
+.log-text{color:var(--text);line-height:1.5}
+.log-detail{color:var(--muted);font-size:11px;margin-top:1px}
+.activity-grid{display:flex;gap:4px;align-items:flex-end;height:50px;margin-bottom:4px}
+.activity-bar{flex:1;border-radius:2px;min-height:4px}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-brand">ChartReplay</a>
+  <a href="/"          class="nav-link">Help</a>
+  <a href="/replay"    class="nav-link">Replay</a>
+  <a href="/backtest"  class="nav-link">Backtest</a>
+  <a href="/analysis"  class="nav-link">Analysis</a>
+  <a href="/history"   class="nav-link">History</a>
+  <a href="/wallet"    class="nav-link">Wallet</a>
+  <a href="/dashboard" class="nav-link active">Dashboard</a>
+</nav>
+
+<main>
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">Monitoring Dashboard</div>
+      <div class="dash-sub">Trading performance · App usage · Activity logs</div>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadDashboard()">Refresh</button>
+  </div>
+
+  <!-- Trading Performance -->
+  <div class="sec-label">Trading Performance</div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-label">Total Trades</div><div class="stat-val" id="s-total">—</div></div>
+    <div class="stat-box"><div class="stat-label">Win Rate</div><div class="stat-val" id="s-wr">—</div></div>
+    <div class="stat-box"><div class="stat-label">Total P&L</div><div class="stat-val" id="s-pl">—</div></div>
+    <div class="stat-box"><div class="stat-label">Avg Win</div><div class="stat-val" id="s-aw" style="color:var(--green)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Avg Loss</div><div class="stat-val" id="s-al" style="color:var(--red)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Entry Score</div><div class="stat-val" id="s-sc" style="color:var(--blue)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Best Trade</div><div class="stat-val" id="s-bt" style="color:var(--green)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Worst Trade</div><div class="stat-val" id="s-wt" style="color:var(--red)">—</div></div>
+  </div>
+  <div id="streak-box" style="margin-bottom:12px"></div>
+
+  <div class="g2">
+    <div class="card"><div class="card-title">Equity Curve</div><canvas id="eq-chart" height="130"></canvas></div>
+    <div class="card"><div class="card-title">Monthly P&L</div><canvas id="mo-chart" height="130"></canvas></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="card-title">By Strategy</div><div id="strat-list"></div></div>
+    <div class="card"><div class="card-title">Top Symbols</div><div id="sym-list"></div></div>
+  </div>
+
+  <!-- App Usage -->
+  <div class="sec-label">App Usage</div>
+  <div class="stat-row" style="margin-bottom:12px">
+    <div class="stat-box"><div class="stat-label">Total Sessions</div><div class="stat-val" id="u-sess">—</div><div class="stat-sub">Replay sessions</div></div>
+    <div class="stat-box"><div class="stat-label">Candles Studied</div><div class="stat-val" id="u-candles">—</div><div class="stat-sub">Total replayed</div></div>
+    <div class="stat-box"><div class="stat-label">Unique Symbols</div><div class="stat-val" id="u-syms">—</div><div class="stat-sub">Stocks analysed</div></div>
+    <div class="stat-box"><div class="stat-label">Backtests Run</div><div class="stat-val" id="u-bt">—</div><div class="stat-sub">Strategy tests</div></div>
+    <div class="stat-box"><div class="stat-label">Top Symbol</div><div class="stat-val" id="u-top" style="font-size:16px">—</div><div class="stat-sub">Most replayed</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Sessions Last 14 Days</div>
+      <div class="activity-grid" id="activity-grid"></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)" id="activity-labels"></div>
+    </div>
+    <div class="card"><div class="card-title">Recent Backtests</div><div id="bt-list"></div></div>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="sec-label">Activity Log <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">— last 7 days</span></div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">Recent Activity</div>
+      <select id="log-filter" onchange="filterLogs()"
+        style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px;outline:none">
+        <option value="">All events</option>
+        <option value="replay_started">Replay sessions</option>
+        <option value="trade_entered">Trade entries</option>
+        <option value="backtest_run">Backtests</option>
+        <option value="analysis_run">Analysis runs</option>
+      </select>
+    </div>
+    <div id="log-list" style="max-height:400px;overflow-y:auto"></div>
+  </div>
+</main>
+
+<script>
+var allLogs = [];
+var eqChart = null;
+var moChart = null;
+
+var LOG_ICONS  = {replay_started:'RPL',trade_entered:'IN',trade_closed:'OUT',backtest_run:'BT',analysis_run:'TA',test_event:'—'};
+var LOG_LABELS = {replay_started:'Replay started',trade_entered:'Trade entered',trade_closed:'Trade closed',backtest_run:'Backtest run',analysis_run:'Analysis run',test_event:'Test event'};
+
+function gc(v) { return v >= 55 ? 'var(--green)' : v >= 45 ? 'var(--orange)' : 'var(--red)'; }
+function pc(v) { return v >= 0  ? 'var(--green)' : 'var(--red)'; }
+function fmt(v){ return (v >= 0 ? '+' : '') + '\u20b9' + (v || 0).toLocaleString('en-IN'); }
+
+async function loadDashboard() {
+  try {
+    var r1 = await fetch('/api/dashboard');
+    var r2 = await fetch('/api/logs');
+    var dash = await r1.json();
+    var logs = await r2.json();
+    allLogs = logs;
+    renderPerformance(dash.performance || {});
+    renderUsage(dash.usage || {});
+    renderLogs(allLogs);
+    document.getElementById('refresh-btn').textContent = 'Refreshed ' + new Date().toLocaleTimeString('en-IN');
+  } catch(e) {
+    console.error('Dashboard error:', e);
+  }
+}
+
+function renderPerformance(p) {
+  var wr = p.win_rate || 0;
+  var pl = p.total_pl || 0;
+
+  document.getElementById('s-total').textContent = p.total_trades || 0;
+
+  var wrEl = document.getElementById('s-wr');
+  wrEl.textContent = wr + '%';
+  wrEl.style.color = gc(wr);
+
+  var plEl = document.getElementById('s-pl');
+  plEl.textContent = fmt(pl);
+  plEl.style.color = pc(pl);
+
+  document.getElementById('s-aw').textContent = '+\u20b9' + (p.avg_win  || 0);
+  document.getElementById('s-al').textContent = '\u20b9'  + (p.avg_loss || 0);
+  document.getElementById('s-sc').textContent = (p.avg_score || 0) + '/100';
+  document.getElementById('s-bt').textContent = '+\u20b9' + (p.best_trade  || 0);
+  document.getElementById('s-wt').textContent = '\u20b9'  + (p.worst_trade || 0);
+
+  // Streak
+  var sb = document.getElementById('streak-box');
+  if (p.cur_streak > 0) {
+    sb.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);border:1px solid var(--green);border-radius:20px;padding:3px 12px;font-size:12px;color:var(--green);font-weight:600">\uD83D\uDD25 ' + p.cur_streak + ' win streak</span>';
+  } else if (p.best_streak > 0) {
+    sb.innerHTML = '<span style="font-size:12px;color:var(--muted)">Best win streak: <strong style="color:var(--text)">' + p.best_streak + '</strong></span>';
+  }
+
+  // Equity curve
+  if (eqChart) { eqChart.destroy(); eqChart = null; }
+  if (p.equity && p.equity.length) {
+    var vals = p.equity.map(function(e) { return e.pl; });
+    var lastColor = vals[vals.length - 1] >= 0 ? '#3fb950' : '#f85149';
+    eqChart = new Chart(document.getElementById('eq-chart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: p.equity.map(function(e) { return e.date; }),
+        datasets: [{data: vals, borderColor: lastColor,
+          backgroundColor: lastColor + '20',
+          borderWidth: 2, fill: true, tension: 0.3,
+          pointRadius: 0, pointHoverRadius: 3}]
+      },
+      options: {responsive:true, plugins:{legend:{display:false}},
+        scales:{x:{display:false}, y:{grid:{color:'#21262d'}, ticks:{color:'#7d8590', callback:function(v){return '\u20b9'+v;}}}}}
+    });
+  } else {
+    document.getElementById('eq-chart').parentElement.innerHTML += '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">No trades yet</div>';
+  }
+
+  // Monthly P&L
+  if (moChart) { moChart.destroy(); moChart = null; }
+  if (p.monthly && p.monthly.length) {
+    var mVals = p.monthly.map(function(m) { return m.pl; });
+    moChart = new Chart(document.getElementById('mo-chart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: p.monthly.map(function(m) { return m.month; }),
+        datasets: [{data: mVals,
+          backgroundColor: mVals.map(function(v) { return v >= 0 ? 'rgba(63,185,80,.7)' : 'rgba(248,81,73,.7)'; }),
+          borderRadius: 3}]
+      },
+      options: {responsive:true, plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#7d8590',font:{size:10}}, grid:{color:'#21262d'}},
+                y:{grid:{color:'#21262d'}, ticks:{color:'#7d8590', callback:function(v){return '\u20b9'+v;}}}}}
+    });
+  }
+
+  // Strategy breakdown
+  var sl = document.getElementById('strat-list');
+  if (p.strategies && p.strategies.length) {
+    var html = '';
+    p.strategies.forEach(function(s) {
+      var wr2 = s.trades > 0 ? Math.round(s.wins / s.trades * 100) : 0;
+      var spl = s.pl || 0;
+      html += '<div class="row">'
+        + '<span style="font-weight:500;text-transform:capitalize">' + (s.strategy || 'swing') + '</span>'
+        + '<span style="color:var(--muted)">' + s.trades + ' trades</span>'
+        + '<span style="color:' + gc(wr2) + '">' + wr2 + '% WR</span>'
+        + '<span style="color:' + pc(spl) + ';font-family:var(--mono)">' + fmt(spl) + '</span>'
+        + '</div>';
+    });
+    sl.innerHTML = html;
+  } else {
+    sl.innerHTML = '<div style="color:var(--muted);font-size:12px">No trades yet</div>';
+  }
+
+  // Symbols
+  var syml = document.getElementById('sym-list');
+  if (p.symbols && p.symbols.length) {
+    var html2 = '';
+    p.symbols.forEach(function(s) {
+      var wr3 = s.trades > 0 ? Math.round(s.wins / s.trades * 100) : 0;
+      var spl2 = s.pl || 0;
+      html2 += '<div class="row">'
+        + '<span style="font-weight:600;min-width:90px">' + s.symbol + '</span>'
+        + '<span style="color:var(--muted)">' + s.trades + 'T</span>'
+        + '<span style="color:' + gc(wr3) + '">' + wr3 + '%</span>'
+        + '<span style="color:' + pc(spl2) + ';font-family:var(--mono)">' + fmt(spl2) + '</span>'
+        + '</div>';
+    });
+    syml.innerHTML = html2;
+  } else {
+    syml.innerHTML = '<div style="color:var(--muted);font-size:12px">No trades yet</div>';
+  }
+}
+
+function renderUsage(u) {
+  document.getElementById('u-sess').textContent    = u.total_sessions || 0;
+  document.getElementById('u-candles').textContent = (u.total_candles || 0).toLocaleString('en-IN');
+  document.getElementById('u-syms').textContent    = u.unique_symbols || 0;
+  document.getElementById('u-bt').textContent      = u.backtests_run  || 0;
+  document.getElementById('u-top').textContent     = u.top_symbol ? u.top_symbol.symbol : '—';
+
+  // Activity grid
+  var grid   = document.getElementById('activity-grid');
+  var labels = document.getElementById('activity-labels');
+  var daily  = u.daily_sessions || [];
+  var maxCnt = 1;
+  daily.forEach(function(d) { if (d.cnt > maxCnt) maxCnt = d.cnt; });
+
+  var days = [];
+  for (var i = 13; i >= 0; i--) {
+    var d = new Date(Date.now() - i * 86400000);
+    days.push(d.toISOString().split('T')[0]);
+  }
+
+  var gridHtml = '';
+  days.forEach(function(day) {
+    var found = null;
+    daily.forEach(function(d) { if (d.day === day) found = d; });
+    var cnt = found ? found.cnt : 0;
+    var h   = Math.max(4, Math.round(cnt / maxCnt * 46));
+    var bg  = cnt > 0 ? 'var(--blue)' : 'var(--surface2)';
+    gridHtml += '<div class="activity-bar" style="height:' + h + 'px;background:' + bg + '" title="' + day + ': ' + cnt + ' sessions"></div>';
+  });
+  grid.innerHTML = gridHtml;
+  labels.innerHTML = '<span>' + days[0].slice(5) + '</span><span>' + days[13].slice(5) + '</span>';
+
+  // Recent backtests
+  fetch('/api/backtests').then(function(r) { return r.json(); }).then(function(bts) {
+    var btl = document.getElementById('bt-list');
+    if (!bts || !bts.length) {
+      btl.innerHTML = '<div style="color:var(--muted);font-size:12px">No backtests run yet</div>';
+      return;
+    }
+    var html = '';
+    bts.slice(0, 5).forEach(function(b) {
+      var wr = b.win_rate || 0;
+      var bpl = b.total_pl || 0;
+      html += '<div style="padding:8px 10px;background:var(--surface2);border-radius:4px;margin-bottom:5px">'
+        + '<div style="display:flex;justify-content:space-between">'
+        + '<span style="font-weight:600;font-size:12px">' + b.symbol + '</span>'
+        + '<span style="color:' + gc(wr) + ';font-family:var(--mono);font-size:12px">' + wr + '% WR · ' + fmt(bpl) + '</span>'
+        + '</div>'
+        + '<div style="color:var(--muted);font-size:11px;margin-top:2px">' + (b.from_date||'') + ' \u2192 ' + (b.to_date||'') + ' · ' + (b.total_trades||0) + ' trades</div>'
+        + '</div>';
+    });
+    btl.innerHTML = html;
+  });
+}
+
+function renderLogs(logs) {
+  var el = document.getElementById('log-list');
+  if (!logs || !logs.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px 0">No activity yet — start a replay session to see logs here</div>';
+    return;
+  }
+  var html = '';
+  logs.forEach(function(l) {
+    var icon  = LOG_ICONS[l.event]  || '\u2022';
+    var label = LOG_LABELS[l.event] || l.event;
+    var time  = l.created_at ? l.created_at.replace('T', ' ').slice(0, 16) : '';
+    var detail = '';
+    try {
+      var d = l.details ? JSON.parse(l.details) : null;
+      if (d) {
+        if (l.event === 'replay_started') detail = (d.symbol||'') + ' \u00b7 ' + (d.timeframe||'') + ' \u00b7 ' + (d.candles||0) + ' candles';
+        if (l.event === 'trade_entered')  detail = (d.symbol||'') + ' \u00b7 Entry \u20b9' + (d.entry||0) + ' \u00b7 ' + (d.strategy||'');
+        if (l.event === 'backtest_run')   detail = (d.symbol||'') + ' \u00b7 ' + (d.trades||0) + ' trades \u00b7 ' + (d.win_rate||0) + '% WR';
+        if (l.event === 'analysis_run')   detail = (d.symbol||'') + ' \u00b7 ' + (d.timeframe||'');
+        if (l.event === 'test_event')     detail = d.msg || '';
+      }
+    } catch(e) {}
+
+    html += '<div class="log-item">'
+      + '<span class="log-time">' + time + '</span>'
+      + '<span class="log-icon">' + icon + '</span>'
+      + '<div class="log-body">'
+      + '<div class="log-text">' + label + '</div>'
+      + (detail ? '<div class="log-detail">' + detail + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function filterLogs() {
+  var filter   = document.getElementById('log-filter').value;
+  var filtered = filter ? allLogs.filter(function(l) { return l.event === filter; }) : allLogs;
+  renderLogs(filtered);
+}
+
+loadDashboard();
+setInterval(loadDashboard, 10000);
+</script>
+</body>
+</html>

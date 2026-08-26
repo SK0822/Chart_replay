@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strategy Backtest — Chart Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;
+  --border:#30363d;--text:#e6edf3;--muted:#7d8590;
+  --green:#3fb950;--blue:#58a6ff;--orange:#d29922;
+  --red:#f85149;--purple:#bc8cff;
+  --green-bg:#0d2e0d;--red-bg:#2e0d0d;--blue-bg:#0d1f3c;
+  --radius:6px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:46px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:4px;transition:all .15s}
+.nav-link:hover,.nav-link.active{background:var(--surface2);color:var(--text)}
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.page-header{margin-bottom:20px}
+.page-title{font-size:20px;font-weight:600}
+.page-subtitle{font-size:13px;color:var(--muted);margin-top:2px}
+.layout{display:grid;grid-template-columns:390px 1fr;gap:16px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg{margin-bottom:10px}
+.fg:last-child{margin-bottom:0}
+label{display:block;font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--blue)}
+input[type=number]{font-family:var(--mono)}
+
+/* Condition rows */
+.cond-row{display:flex;gap:5px;align-items:center;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;flex-wrap:wrap}
+.csel{font-size:12px;padding:4px 7px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;cursor:pointer;flex-shrink:0}
+.csel:focus{border-color:var(--blue)}
+.cinp{width:64px;font-size:12px;padding:4px 7px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);outline:none;flex-shrink:0}
+.cinp:focus{border-color:var(--blue)}
+.chint{font-size:10px;color:var(--muted);white-space:nowrap}
+.cdel{width:22px;height:22px;border-radius:4px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0}
+.cdel:hover{color:var(--red)}
+
+/* Add condition button */
+.add-btn{width:100%;padding:7px;border:1px dashed var(--border);border-radius:var(--radius);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;text-align:center;transition:all .15s;font-family:var(--font)}
+.add-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* Exit grid */
+.exit-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.exit-box{background:var(--surface2);border-radius:var(--radius);padding:8px 10px}
+.exit-label{font-size:10px;color:var(--muted);margin-bottom:4px}
+.exit-box input{padding:4px 7px;font-size:12px}
+
+/* Run button */
+.run-btn{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;font-family:var(--font);transition:opacity .15s}
+.run-btn:hover{opacity:.85}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Results */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat-box{background:var(--surface2);border-radius:var(--radius);padding:10px 12px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text);line-height:1}
+
+/* Trade table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:hover td{background:var(--surface2)}
+td{padding:7px 10px;white-space:nowrap;font-family:var(--mono)}
+.win-row td:first-child{border-left:3px solid var(--green)}
+.loss-row td:first-child{border-left:3px solid var(--red)}
+
+.badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+
+/* States */
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.loader{display:none;text-align:center;padding:40px;color:var(--muted)}
+.loader.show{display:block}
+.spinner{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Notice boxes */
+.warn{background:#2e1e0d;border:1px solid var(--orange);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--orange);margin-bottom:12px}
+.info{background:var(--blue-bg);border:1px solid var(--blue);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:12px}
+.good{background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:0}
+.bad{background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:0}
+.mid{background:#2e1e0d;border:1px solid var(--orange);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--orange);margin-bottom:0}
+
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand">ChartReplay</a>
+  <a href="/"         class="nav-link">Help</a>
+  <a href="/replay"   class="nav-link">Replay</a>
+  <a href="/backtest" class="nav-link active">Backtest</a>
+  <a href="/analysis" class="nav-link">Analysis</a>
+  <a href="/history"  class="nav-link">History</a>
+  <a href="/wallet"   class="nav-link">Wallet</a>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="page-title">Strategy Backtest</div>
+    <div class="page-subtitle">Build entry conditions visually · test on historical NSE data · see win rate and P&L</div>
+  </div>
+
+  <div class="layout">
+
+    <!-- LEFT — Builder -->
+    <div>
+
+      <!-- Stock & Date -->
+      <div class="card">
+        <div class="card-title">Stock & Date Range</div>
+        <div class="g2" style="margin-bottom:10px">
+          <div class="fg" style="margin:0">
+            <label>NSE Symbol</label>
+            <input type="text" id="bt-sym" value="RELIANCE" placeholder="RELIANCE"
+                   style="font-family:var(--mono);text-transform:uppercase"
+                   oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="fg" style="margin:0">
+            <label>Capital per trade (₹)</label>
+            <input type="number" id="bt-cap" value="50000">
+          </div>
+        </div>
+        <div class="g2">
+          <div class="fg" style="margin:0">
+            <label>From Date</label>
+            <input type="date" id="bt-from">
+          </div>
+          <div class="fg" style="margin:0">
+            <label>To Date</label>
+            <input type="date" id="bt-to">
+          </div>
+        </div>
+      </div>
+
+      <!-- Entry conditions -->
+      <div class="card">
+        <div class="card-title">
+          Entry Conditions
+          <span style="font-size:10px;font-weight:400;text-transform:none;color:var(--muted)"> — ALL must be true on same day</span>
+        </div>
+        <div id="cond-list"></div>
+        <button class="add-btn" onclick="addCond()">+ Add Condition</button>
+      </div>
+
+      <!-- Exit rules -->
+      <div class="card">
+        <div class="card-title">Exit Rules</div>
+        <div class="exit-g">
+          <div class="exit-box">
+            <div class="exit-label">Stop Loss %</div>
+            <input type="number" id="bt-sl" value="1.5" step="0.1" class="cinp" style="width:100%">
+          </div>
+          <div class="exit-box">
+            <div class="exit-label">Target %</div>
+            <input type="number" id="bt-tgt" value="3.75" step="0.1" class="cinp" style="width:100%">
+          </div>
+          <div class="exit-box">
+            <div class="exit-label">Max Hold Days</div>
+            <input type="number" id="bt-hold" value="10" class="cinp" style="width:100%">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">
+          Entry at next day open · SL hit → LOSS · Target hit → WIN · Max days exceeded → exit at close
+        </div>
+      </div>
+
+      <button class="run-btn" id="run-btn" onclick="runBacktest()">▶ Run Backtest</button>
+
+      <div class="warn" style="margin-top:12px">
+        ⚠ Backtesting shows historical performance only. Past results do not guarantee future returns. Always paper trade before real money.
+      </div>
+    </div>
+
+    <!-- RIGHT — Results -->
+    <div>
+      <div id="results">
+        <div class="empty-state">
+          <div style="font-size:16px;font-weight:500;margin-bottom:8px;color:var(--text)">Build a strategy, then run the backtest</div>
+          <div style="font-size:13px">Add entry conditions on the left, set your exit rules, and select Run backtest.</div>
+        </div>
+      </div>
+      <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <div>Running backtest on Yahoo Finance data...</div>
+        <div style="font-size:11px;margin-top:6px">May take 5–10 seconds for large date ranges</div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ── Indicator / operator / value config ──────────────────────
+const INDS = [
+  {id:'rsi',                label:'RSI (14)'},
+  {id:'macd',               label:'MACD'},
+  {id:'price_vs_ema',       label:'Price vs EMA'},
+  {id:'ema_cross',          label:'EMA Crossover'},
+  {id:'volume',             label:'Volume'},
+  {id:'bb',                 label:'Bollinger Band'},
+  {id:'adx',                label:'ADX'},
+  {id:'52w_high',           label:'Near 52W High'},
+  {id:'candle_color',       label:'Candle Color'},
+  {id:'consecutive_closes', label:'Consecutive Closes'},
+];
+
+const OPS = {
+  rsi:              [{id:'less_than',label:'< less than'},{id:'greater_than',label:'> greater than'},{id:'between',label:'between'}],
+  macd:             [{id:'crossed_above',label:'crossed above signal'},{id:'crossed_below',label:'crossed below signal'},{id:'above',label:'above signal'},{id:'below',label:'below signal'}],
+  price_vs_ema:     [{id:'above',label:'is above'},{id:'below',label:'is below'}],
+  ema_cross:        [{id:'crossed_above',label:'fast crossed above slow'},{id:'above',label:'fast is above slow'}],
+  volume:           [{id:'greater_than',label:'greater than'},{id:'less_than',label:'less than'}],
+  bb:               [{id:'above_upper',label:'above upper band'},{id:'below_lower',label:'below lower band'},{id:'inside',label:'inside bands'}],
+  adx:              [{id:'greater_than',label:'> greater than'},{id:'less_than',label:'< less than'}],
+  '52w_high':       [{id:'within_pct',label:'price within % of 52W high'}],
+  candle_color:     [{id:'green',label:'is green (bullish)'},{id:'red',label:'is red (bearish)'}],
+  consecutive_closes:[{id:'higher',label:'higher closes in a row'}],
+};
+
+const VCFG = {
+  rsi:              {type:'num', ph:'45',  hint:'0–100'},
+  macd:             {type:'none'},
+  price_vs_ema:     {type:'ema', emas:[20,50,200]},
+  ema_cross:        {type:'cross'},
+  volume:           {type:'num', ph:'2',   hint:'× 10-day avg'},
+  bb:               {type:'none'},
+  adx:              {type:'num', ph:'25',  hint:'0–100'},
+  '52w_high':       {type:'num', ph:'95',  hint:'% e.g. 95 = within 5%'},
+  candle_color:     {type:'none'},
+  consecutive_closes:{type:'num',ph:'3',   hint:'days'},
+};
+
+// ── State ─────────────────────────────────────────────────────
+let conds = [];
+let nextId = 1;
+
+// ── Add / remove ──────────────────────────────────────────────
+function addCond(preset) {
+  const id  = nextId++;
+  const ind = (preset && preset.indicator) || 'rsi';
+  const op  = (preset && preset.operator)  || (OPS[ind][0] && OPS[ind][0].id) || '';
+  const val = (preset && preset.value  != null) ? preset.value  : parseFloat(VCFG[ind].ph) || 0;
+  const v2  = (preset && preset.value2 != null) ? preset.value2 : null;
+  const fast= (preset && preset.fast)  || 20;
+  const slow= (preset && preset.slow)  || 50;
+  conds.push({id, indicator:ind, operator:op, value:val, value2:v2, fast, slow});
+  renderAll();
+}
+
+function removeCond(id) {
+  conds = conds.filter(c => c.id !== id);
+  renderAll();
+}
+
+// ── Render all rows ───────────────────────────────────────────
+function renderAll() {
+  const el = document.getElementById('cond-list');
+  if (!conds.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px 0;text-align:center">No conditions — click Add Condition below</div>';
+    return;
+  }
+  el.innerHTML = conds.map(c => buildRow(c)).join('');
+}
+
+function buildRow(c) {
+  const ops = OPS[c.indicator] || [];
+  const vc  = VCFG[c.indicator] || {type:'none'};
+
+  // Indicator select
+  const indSel = '<select class="csel" onchange="onIndChange(' + c.id + ',this.value)">'
+    + INDS.map(i => '<option value="' + i.id + '"' + (c.indicator === i.id ? ' selected' : '') + '>' + i.label + '</option>').join('')
+    + '</select>';
+
+  // Operator select
+  const opSel = '<select class="csel" onchange="onOpChange(' + c.id + ',this.value)">'
+    + ops.map(o => '<option value="' + o.id + '"' + (c.operator === o.id ? ' selected' : '') + '>' + o.label + '</option>').join('')
+    + '</select>';
+
+  // Value part
+  let valPart = '';
+  if (vc.type === 'num') {
+    valPart = '<input class="cinp" type="number" value="' + (c.value || '') + '" placeholder="' + (vc.ph||'') + '" onchange="onValChange(' + c.id + ',\'value\',this.value)">'
+      + '<span class="chint">' + (vc.hint||'') + '</span>';
+    if (c.operator === 'between') {
+      valPart += '<span style="font-size:11px;color:var(--muted)">and</span>'
+        + '<input class="cinp" type="number" value="' + (c.value2||'') + '" placeholder="55" onchange="onValChange(' + c.id + ',\'value2\',this.value)">';
+    }
+  } else if (vc.type === 'ema') {
+    valPart = '<select class="csel" onchange="onValChange(' + c.id + ',\'value\',this.value)">'
+      + [20,50,200].map(e => '<option value="' + e + '"' + (c.value == e ? ' selected' : '') + '>EMA ' + e + '</option>').join('')
+      + '</select>';
+  } else if (vc.type === 'cross') {
+    valPart = '<select class="csel" onchange="onValChange(' + c.id + ',\'fast\',this.value)">'
+      + [10,20].map(e => '<option value="' + e + '"' + (c.fast == e ? ' selected' : '') + '>EMA ' + e + '</option>').join('')
+      + '</select>'
+      + '<span class="chint">↔</span>'
+      + '<select class="csel" onchange="onValChange(' + c.id + ',\'slow\',this.value)">'
+      + [50,200].map(e => '<option value="' + e + '"' + (c.slow == e ? ' selected' : '') + '>EMA ' + e + '</option>').join('')
+      + '</select>';
+  }
+
+  const del = '<button class="cdel" onclick="removeCond(' + c.id + ')" title="Remove">✕</button>';
+  return '<div class="cond-row">' + indSel + opSel + valPart + del + '</div>';
+}
+
+// ── Change handlers ───────────────────────────────────────────
+function onIndChange(id, val) {
+  const c = conds.find(x => x.id === id);
+  if (!c) return;
+  c.indicator = val;
+  c.operator  = (OPS[val] && OPS[val][0]) ? OPS[val][0].id : '';
+  c.value     = parseFloat((VCFG[val] && VCFG[val].ph) || '0') || 0;
+  c.value2    = null;
+  renderAll();
+}
+
+function onOpChange(id, val) {
+  const c = conds.find(x => x.id === id);
+  if (c) { c.operator = val; renderAll(); }
+}
+
+function onValChange(id, field, val) {
+  const c = conds.find(x => x.id === id);
+  if (c) c[field] = isNaN(parseFloat(val)) ? val : parseFloat(val);
+}
+
+// ── Run backtest ──────────────────────────────────────────────
+async function runBacktest() {
+  if (!conds.length) { alert('Add at least one entry condition'); return; }
+
+  const sym  = document.getElementById('bt-sym').value.trim().toUpperCase();
+  const from = document.getElementById('bt-from').value;
+  const to   = document.getElementById('bt-to').value;
+  const sl   = parseFloat(document.getElementById('bt-sl').value)   || 1.5;
+  const tgt  = parseFloat(document.getElementById('bt-tgt').value)  || 3.75;
+  const hold = parseInt(document.getElementById('bt-hold').value)   || 10;
+  const cap  = parseFloat(document.getElementById('bt-cap').value)  || 50000;
+
+  if (!sym || !from || !to) { alert('Fill symbol and dates'); return; }
+
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loader').classList.add('show');
+  document.getElementById('run-btn').disabled = true;
+
+  try {
+    const r = await fetch('/api/backtest', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        symbol: sym, from_date: from, to_date: to,
+        conditions: conds, sl_pct: sl, target_pct: tgt,
+        max_hold: hold, capital: cap
+      })
+    });
+    const data = await r.json();
+    document.getElementById('loader').classList.remove('show');
+    document.getElementById('results').style.display = '';
+    document.getElementById('run-btn').disabled = false;
+    showResults(data);
+  } catch(e) {
+    document.getElementById('loader').classList.remove('show');
+    document.getElementById('results').style.display = '';
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('results').innerHTML = '<div class="warn">Error: ' + e.message + '</div>';
+  }
+}
+
+// ── Show results ──────────────────────────────────────────────
+function showResults(data) {
+  const el = document.getElementById('results');
+
+  if (data.error) {
+    el.innerHTML = '<div class="warn">⚠ ' + data.error + '</div>';
+    return;
+  }
+
+  if (data.total_trades === 0) {
+    el.innerHTML = '<div class="card"><div class="info">ℹ ' + data.message + '</div></div>';
+    return;
+  }
+
+  const s = data.stats;
+  const wrc = s.win_rate >= 55 ? 'var(--green)' : s.win_rate >= 45 ? 'var(--orange)' : 'var(--red)';
+  const plc = s.total_pl >= 0 ? 'var(--green)' : 'var(--red)';
+  const exc = s.expectancy >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const verdict = s.win_rate >= 55 && s.expectancy > 0
+    ? '<div class="good">✓ Positive expectancy with 55%+ win rate — this strategy has edge. Consider paper trading it.</div>'
+    : s.win_rate < 45
+    ? '<div class="bad">✗ Win rate below 45% — strategy needs improvement. Try relaxing or changing conditions.</div>'
+    : '<div class="mid">~ Borderline results — try a longer date range for more meaningful data.</div>';
+
+  el.innerHTML =
+    '<div class="card">'
+    + '<div class="card-title">Results — ' + data.symbol + ' · ' + data.from_date + ' to ' + data.to_date + '</div>'
+    + '<div class="stat-grid">'
+    + statBox('Total Trades', s.total_trades, 'var(--text)')
+    + statBox('Win Rate', s.win_rate + '%', wrc)
+    + statBox('Total P&L', (s.total_pl>=0?'+':'')+'₹'+s.total_pl.toLocaleString('en-IN'), plc)
+    + statBox('Avg Win', '+₹'+s.avg_win, 'var(--green)')
+    + statBox('Avg Loss', '₹'+s.avg_loss, 'var(--red)')
+    + statBox('Max Drawdown', '-₹'+s.max_drawdown, 'var(--orange)')
+    + statBox('Wins / Losses', s.wins+'W / '+s.losses+'L', 'var(--text)')
+    + statBox('Expectancy', (s.expectancy>=0?'+':'')+'₹'+s.expectancy, exc)
+    + statBox('Best / Worst', '+₹'+s.best_trade+' / ₹'+s.worst_trade, 'var(--text)')
+    + '</div>'
+    + verdict
+    + '</div>'
+
+    + '<div class="g2" style="margin-bottom:12px">'
+    + '<div class="card" style="margin:0"><div class="card-title">Equity Curve</div><canvas id="eq-chart" height="140"></canvas></div>'
+    + '<div class="card" style="margin:0"><div class="card-title">Monthly P&L</div><canvas id="mo-chart" height="140"></canvas></div>'
+    + '</div>'
+
+    + '<div class="card"><div class="card-title">All Trades (' + data.total_trades + ')</div>'
+    + '<div class="tbl-wrap"><table>'
+    + '<thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Entry ₹</th><th>Exit ₹</th><th>Days</th><th>P&L ₹</th><th>P&L %</th><th>Result</th><th>Reason & Conditions</th></tr></thead>'
+    + '<tbody>'
+    + data.trades.map(function(t,i){
+        var condHtml = '';
+        if(t.conditions && t.conditions.length){
+          condHtml = '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">'
+            + t.conditions.map(function(c){
+                return '<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:'
+                  + (c.passed?'var(--green-bg)':'var(--red-bg)')
+                  + ';color:'+(c.passed?'var(--green)':'var(--red)')
+                  + '">'+(c.passed?'✓':'✗')+' '+c.desc+'</span>';
+              }).join('')
+            + '</div>';
+        }
+        var sessionHtml = t.session
+          ? '<div style="font-size:10px;color:var(--muted);margin-top:2px">⏰ '+t.session+'</div>'
+          : '';
+        return '<tr class="' + (t.result==='WIN'?'win-row':'loss-row') + '">'
+          + '<td style="color:var(--muted)">'+(i+1)+'</td>'
+          + '<td>'+t.entry_date+'</td>'
+          + '<td>'+t.exit_date+'</td>'
+          + '<td>₹'+t.entry_price+'</td>'
+          + '<td>₹'+t.exit_price+'</td>'
+          + '<td>'+t.days_held+'d</td>'
+          + '<td style="color:'+(t.pl_rs>=0?'var(--green)':'var(--red)')+'font-family:var(--mono)">'+(t.pl_rs>=0?'+':'')+t.pl_rs+'</td>'
+          + '<td style="color:'+(t.pl_pct>=0?'var(--green)':'var(--red)')+'font-family:var(--mono)">'+(t.pl_pct>=0?'+':'')+t.pl_pct+'%</td>'
+          + '<td><span class="badge '+(t.result==='WIN'?'badge-green':'badge-red')+'">'+t.result+'</span></td>'
+          + '<td style="min-width:280px">'
+          + '<div style="font-size:11px;font-weight:500;color:'+(t.result==='WIN'?'var(--green)':'var(--red)')+'">'+t.exit_reason+'</div>'
+          + '<div style="font-size:10px;color:var(--muted);margin-top:1px">'+( t.exit_detail||'')+'</div>'
+          + condHtml
+          + sessionHtml
+          + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table></div></div>';
+
+  // Equity chart
+  if (data.equity_curve.length) {
+    const vals = data.equity_curve.map(d => d.pl);
+    new Chart(document.getElementById('eq-chart').getContext('2d'), {
+      type:'line',
+      data:{
+        labels: data.equity_curve.map(d=>d.date),
+        datasets:[{data:vals,
+          borderColor: vals[vals.length-1]>=0?'#3fb950':'#f85149',
+          backgroundColor: vals[vals.length-1]>=0?'rgba(63,185,80,.1)':'rgba(248,81,73,.1)',
+          borderWidth:2,fill:true,tension:0.3,pointRadius:0,pointHoverRadius:3}]
+      },
+      options:{responsive:true,plugins:{legend:{display:false}},
+        scales:{x:{display:false},y:{grid:{color:'#21262d'},ticks:{color:'#7d8590',callback:v=>'₹'+v.toLocaleString('en-IN')}}}}
+    });
+  }
+
+  // Monthly chart
+  const months = Object.keys(data.monthly_pl).sort();
+  if (months.length) {
+    const mVals = months.map(m => data.monthly_pl[m]);
+    new Chart(document.getElementById('mo-chart').getContext('2d'), {
+      type:'bar',
+      data:{labels:months,datasets:[{data:mVals,
+        backgroundColor:mVals.map(v=>v>=0?'rgba(63,185,80,.7)':'rgba(248,81,73,.7)'),borderRadius:3}]},
+      options:{responsive:true,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#7d8590',font:{size:10}},grid:{color:'#21262d'}},
+                y:{grid:{color:'#21262d'},ticks:{color:'#7d8590',callback:v=>'₹'+v.toLocaleString('en-IN')}}}}
+    });
+  }
+}
+
+function statBox(label, val, color) {
+  return '<div class="stat-box"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+color+'">'+val+'</div></div>';
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+const now  = new Date();
+const then = new Date(now); then.setFullYear(then.getFullYear()-2);
+document.getElementById('bt-to').value   = now.toISOString().split('T')[0];
+document.getElementById('bt-from').value = then.toISOString().split('T')[0];
+
+// 3 default conditions
+addCond({indicator:'rsi',         operator:'less_than',    value:45});
+addCond({indicator:'macd',        operator:'crossed_above', value:0});
+addCond({indicator:'price_vs_ema',operator:'above',        value:50});
+</script>
+</body>
+</html>

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chart Replay — Help & Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d1117; --surface:#161b22; --surface2:#1c2128;
+    --border:#30363d; --text:#e6edf3; --muted:#7d8590;
+    --green:#3fb950; --blue:#58a6ff; --orange:#d29922;
+    --red:#f85149; --purple:#bc8cff;
+    --green-bg:#0d2e0d; --blue-bg:#0d1f3c;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+
+  /* Nav */
+  nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .nav-brand{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px}
+  .nav-dot{width:10px;height:10px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .nav-btn{background:var(--green);color:#000;font-weight:600;font-size:13px;padding:8px 18px;border-radius:var(--radius);text-decoration:none;transition:opacity .15s}
+  .nav-btn:hover{opacity:.85}
+
+  /* Hero */
+  .hero{text-align:center;padding:80px 32px 60px;max-width:800px;margin:0 auto}
+  .hero-icon{font-size:56px;margin-bottom:20px}
+  .hero h1{font-size:42px;font-weight:700;margin-bottom:16px;line-height:1.2}
+  .hero h1 span{color:var(--green)}
+  .hero p{font-size:17px;color:var(--muted);max-width:560px;margin:0 auto 32px}
+  .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn-primary{background:var(--green);color:#000;font-weight:600;font-size:14px;padding:12px 28px;border-radius:var(--radius);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  .btn-primary:hover{opacity:.85}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;padding:12px 24px;border-radius:var(--radius);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  .btn-ghost:hover{background:var(--surface2)}
+
+  /* Sections */
+  .section{padding:60px 32px;max-width:1100px;margin:0 auto}
+  .section-label{font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
+  .section-title{font-size:28px;font-weight:700;margin-bottom:12px}
+  .section-sub{font-size:15px;color:var(--muted);max-width:580px;margin-bottom:40px}
+  .divider{border:none;border-top:1px solid var(--border);margin:0}
+
+  /* What is it */
+  .what-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .what-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
+  .what-icon{font-size:28px;margin-bottom:10px}
+  .what-title{font-size:15px;font-weight:600;margin-bottom:6px}
+  .what-desc{font-size:13px;color:var(--muted);line-height:1.6}
+
+  /* How it works steps */
+  .steps{display:flex;flex-direction:column;gap:0}
+  .step{display:flex;gap:20px;padding:24px 0;border-bottom:1px solid var(--border)}
+  .step:last-child{border:none}
+  .step-num{width:40px;height:40px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--text);flex-shrink:0;margin-top:2px}
+  .step-body{flex:1}
+  .step-title{font-size:16px;font-weight:600;margin-bottom:6px}
+  .step-desc{font-size:14px;color:var(--muted);line-height:1.6}
+  .step-tip{font-size:12px;color:var(--green);margin-top:6px;font-family:'JetBrains Mono',monospace}
+
+  /* Features grid */
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .feat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+  .feat-icon{font-size:24px;margin-bottom:10px}
+  .feat-title{font-size:14px;font-weight:600;margin-bottom:6px}
+  .feat-desc{font-size:12px;color:var(--muted);line-height:1.6}
+  .feat-tag{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;margin-top:8px}
+  .tag-green{background:var(--green-bg);color:var(--green)}
+  .tag-blue{background:var(--blue-bg);color:var(--blue)}
+  .tag-orange{background:#2e1e0d;color:var(--orange)}
+
+  /* Keyboard shortcuts */
+  .kbd-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kbd-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+  .kbd{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--text);white-space:nowrap}
+  .kbd-desc{font-size:13px;color:var(--muted)}
+
+  /* Chart types */
+  .chart-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+  .chart-icon{font-size:28px;margin-bottom:8px}
+  .chart-name{font-size:13px;font-weight:600;margin-bottom:4px}
+  .chart-desc{font-size:11px;color:var(--muted);line-height:1.4}
+
+  /* Indicators */
+  .ind-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .ind-row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+  .ind-color{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px}
+  .ind-name{font-size:13px;font-weight:600;margin-bottom:2px}
+  .ind-desc{font-size:12px;color:var(--muted)}
+
+  /* Strategy guide */
+  .strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .strat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
+  .strat-title{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .strat-item{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .strat-item:last-child{border:none}
+  .strat-check{color:var(--green);font-weight:700;flex-shrink:0}
+
+  /* Pattern cards */
+  .pat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .pat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .pat-name{font-size:13px;font-weight:600;margin-bottom:4px}
+  .pat-type{font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px;margin-bottom:6px;display:inline-block}
+  .pat-bull{background:var(--green-bg);color:var(--green)}
+  .pat-bear{background:#2e0d0d;color:var(--red)}
+  .pat-neut{background:var(--surface2);color:var(--muted)}
+  .pat-desc{font-size:11px;color:var(--muted);line-height:1.5}
+
+  /* FAQ */
+  .faq-item{border-bottom:1px solid var(--border);padding:18px 0}
+  .faq-q{font-size:15px;font-weight:600;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .faq-a{font-size:13px;color:var(--muted);line-height:1.7}
+
+  /* CTA */
+  .cta{text-align:center;padding:80px 32px;background:var(--surface);border-top:1px solid var(--border)}
+  .cta h2{font-size:32px;font-weight:700;margin-bottom:12px}
+  .cta p{font-size:15px;color:var(--muted);margin-bottom:28px}
+
+  /* Responsive */
+  @media(max-width:768px){
+    .what-grid,.strat-grid,.feat-grid,.ind-grid,.kbd-grid{grid-template-columns:1fr}
+    .chart-grid,.pat-grid{grid-template-columns:repeat(2,1fr)}
+    .hero h1{font-size:28px}
+    .section{padding:40px 16px}
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-brand">ChartReplay</div>
+  <div style="display:flex;gap:8px">
+    <a href="/replay"   class="nav-btn nav-btn-primary">Open replay</a>
+    <a href="/backtest" class="nav-btn">Backtest</a>
+    <a href="/analysis" class="nav-btn">Analysis</a>
+    <a href="/history"  class="nav-btn">History</a>
+    <a href="/wallet"   class="nav-btn">Wallet</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Learn trading by<br><span>watching history unfold</span></h1>
+  <p>A free chart replay tool for NSE India stocks. Study real historical price action, practice reading charts, and test your strategies — without risking real money.</p>
+  <div class="hero-btns">
+    <a href="/replay" class="btn-primary">▶ Start Replay</a>
+    <a href="#how" class="btn-ghost">How it works ↓</a>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- What is it -->
+<div class="section">
+  <div class="section-label">What is Chart Replay</div>
+  <div class="section-title">Like watching a match replay — but for stocks</div>
+  <div class="section-sub">Chart Replay lets you go back in time and experience historical price movement as if it's happening live. Perfect for beginners learning to read charts.</div>
+
+  <div class="what-grid">
+    <div class="what-card">
+      <div class="what-title">Replay historical data</div>
+      <div class="what-desc">Pick any NSE stock, select a date range, and watch candles appear one by one — exactly like watching the market live. You see only the past, not the future.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-title">Draw support & resistance</div>
+      <div class="what-desc">Pause anytime and draw horizontal lines, support levels, resistance levels, and trendlines directly on the chart. Lines stay while replay continues.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-title">Study indicators</div>
+      <div class="what-desc">EMA, SMA, Bollinger Bands, VWAP, RSI, MACD — all updating in real time as each candle appears. Toggle any indicator on or off.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-title">Paper trade during replay</div>
+      <div class="what-desc">When you see a setup you like, click + Trade to log a paper entry with stop loss and target. Watch what actually happened — WIN or LOSS.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- How it works -->
+<div class="section" id="how">
+  <div class="section-label">How to use it</div>
+  <div class="section-title">5 steps to your first replay session</div>
+  <div class="section-sub">Takes less than 2 minutes to get started.</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Pick a stock</div>
+        <div class="step-desc">Type any NSE symbol in the Symbol box — RELIANCE, HDFCBANK, INFY, TATASTEEL. The app automatically fetches data from Yahoo Finance. No login needed.</div>
+        <div class="step-tip">Start with a stock you know — makes it easier to relate news events to price movements</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Select date range and timeframe</div>
+        <div class="step-desc">Choose From and To dates. For swing strategy — use 1D (daily) timeframe and pick 6-12 months of data. For intraday practice — use 5min or 15min and pick 1-2 weeks.</div>
+        <div class="step-tip">Tip: Start with 1D timeframe and 6 months of data. Each candle = 1 trading day.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Click Load Data, then ▶ Play</div>
+        <div class="step-desc">Data loads from Yahoo Finance (usually 2-3 seconds). Press Play — candles appear one by one. Use the speed slider to go faster or slower. Press Space to pause anytime.</div>
+        <div class="step-tip">Default speed is 5× — adjust to your comfort. 0.5× is best for studying individual candles.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Pause and analyze when you see something</div>
+        <div class="step-desc">When you see an interesting candle or pattern — press Space to pause. Draw your support/resistance lines. Check RSI (below 30 = oversold) and MACD (crossover = momentum shift).</div>
+        <div class="step-tip">Look for: price near support + RSI below 40 + MACD about to cross — that's a potential buy setup</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Place a paper trade and keep watching</div>
+        <div class="step-desc">Click + Trade to log your paper entry with stop loss and target. Then press Play again. Watch what actually happened. Did price hit your target or stop loss? Your win/loss is logged automatically.</div>
+        <div class="step-tip">Always set a stop loss before entering. If you can't identify a stop loss level — skip the trade.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Chart types -->
+<div class="section">
+  <div class="section-label">Chart Types</div>
+  <div class="section-title">5 ways to view price action</div>
+  <div class="section-sub">Switch between chart types using the dropdown. Each shows the same data differently.</div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-name">Candlestick</div>
+      <div class="chart-desc">Standard chart. Green = price went up. Red = price went down. Shows Open, High, Low, Close clearly.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-name">Heikin Ashi</div>
+      <div class="chart-desc">Smoothed candles. Easier to see trend direction. Green candles in a row = strong uptrend. Best for beginners.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-name">Line</div>
+      <div class="chart-desc">Just the closing price connected as a line. Removes noise. Good for seeing the big picture trend.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-name">Area</div>
+      <div class="chart-desc">Line chart with shaded area below. Visually shows how far price has moved from lows. Good for overview.</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-name">Bar</div>
+      <div class="chart-desc">OHLC bars. Classic style used by professional traders. Each bar shows open (left tick) and close (right tick).</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Indicators -->
+<div class="section">
+  <div class="section-label">Indicators</div>
+  <div class="section-title">What each indicator tells you</div>
+  <div class="section-sub">Toggle any indicator on or off. Start with EMA 20/50 and RSI — add others as you get comfortable.</div>
+
+  <div class="ind-grid">
+    <div class="ind-row">
+      <div class="ind-color" style="background:#58a6ff"></div>
+      <div>
+        <div class="ind-name">EMA 20 (blue line)</div>
+        <div class="ind-desc">20-day exponential moving average. Fast-moving trend line. Price above EMA 20 = short-term bullish. Best for swing entries.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#d29922"></div>
+      <div>
+        <div class="ind-name">EMA 50 (orange line)</div>
+        <div class="ind-desc">50-day EMA. Slower trend line. When EMA 20 crosses above EMA 50 = golden cross (bullish). Price above both = strong uptrend.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#bc8cff"></div>
+      <div>
+        <div class="ind-name">EMA 200 (purple line)</div>
+        <div class="ind-desc">Long-term trend. Price above EMA 200 = bull market. Many institutional traders only buy stocks above EMA 200.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#ffffff60"></div>
+      <div>
+        <div class="ind-name">Bollinger Bands 2σ (white)</div>
+        <div class="ind-desc">Standard deviation bands. Price touching upper band = overbought. Price touching lower band = oversold. Narrow bands = big move coming.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#f59e0b"></div>
+      <div>
+        <div class="ind-name">Bollinger Bands 3σ (amber)</div>
+        <div class="ind-desc">Wider bands for extreme moves only. Price touching 3σ band is very rare — when it happens, a reversal is highly likely.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#f59e0b"></div>
+      <div>
+        <div class="ind-name">VWAP (amber line)</div>
+        <div class="ind-desc">Volume Weighted Average Price. Resets each day. Most important intraday indicator. Price above VWAP = buyers in control.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#bc8cff"></div>
+      <div>
+        <div class="ind-name">RSI (purple, separate panel)</div>
+        <div class="ind-desc">0-100 oscillator. Below 30 = oversold (potential buy). Above 70 = overbought (potential sell). Most useful when combined with price levels.</div>
+      </div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-color" style="background:#58a6ff"></div>
+      <div>
+        <div class="ind-name">MACD (separate panel)</div>
+        <div class="ind-desc">Blue line crossing above red line = bullish momentum shift. Histogram bars show strength. Best used alongside RSI confirmation.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Candle patterns -->
+<div class="section">
+  <div class="section-label">Candle Patterns</div>
+  <div class="section-title">Auto-detected patterns</div>
+  <div class="section-sub">The app automatically detects and labels these patterns as they appear during replay. A small label shows above or below the candle.</div>
+
+  <div class="pat-grid">
+    <div class="pat-card">
+      <div class="pat-name">Doji</div>
+      <div><span class="pat-type pat-neut">Neutral</span></div>
+      <div class="pat-desc">Open and close are almost equal. Market is indecisive. Often signals a reversal when appearing after a trend.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Hammer</div>
+      <div><span class="pat-type pat-bull">Bullish</span></div>
+      <div class="pat-desc">Small body at top, long lower wick. Buyers rejected lower prices. Strong reversal signal at support levels.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Hanging Man</div>
+      <div><span class="pat-type pat-bear">Bearish</span></div>
+      <div class="pat-desc">Same shape as Hammer but appears in uptrend. Warning that sellers are starting to push back.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Shooting Star</div>
+      <div><span class="pat-type pat-bear">Bearish</span></div>
+      <div class="pat-desc">Small body at bottom, long upper wick. Buyers pushed price up but sellers pushed it back down. Reversal at resistance.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Bullish Engulfing</div>
+      <div><span class="pat-type pat-bull">Bullish</span></div>
+      <div class="pat-desc">Large green candle completely covers previous red candle. Strong buying. Reliable reversal signal with volume.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Bearish Engulfing</div>
+      <div><span class="pat-type pat-bear">Bearish</span></div>
+      <div class="pat-desc">Large red candle covers previous green candle. Strong selling. Exit signal if you're holding a long position.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Inside Bar</div>
+      <div><span class="pat-type pat-neut">Neutral</span></div>
+      <div class="pat-desc">Current candle is completely inside previous candle's range. Market consolidating. Breakout of the range = next move.</div>
+    </div>
+    <div class="pat-card">
+      <div class="pat-name">Morning Star</div>
+      <div><span class="pat-type pat-bull">Bullish</span></div>
+      <div class="pat-desc">3-candle pattern: bearish, small doji, bullish. Classic bottom reversal. One of the most reliable patterns.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Strategy guide -->
+<div class="section">
+  <div class="section-label">Strategy Guide</div>
+  <div class="section-title">What to look for when practicing</div>
+  <div class="section-sub">Two simple setups to start with. Practice identifying these on replay before trying any complex strategy.</div>
+
+  <div class="strat-grid">
+    <div class="strat-card">
+      <div class="strat-title">Swing Buy Setup</div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Price is above EMA 50 (uptrend intact)</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Price pulls back to EMA 20 or support level</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>RSI between 35-50 (not overbought)</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>MACD line crossing above signal line</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Volume above average on the entry candle</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Stop loss: below last support or EMA 50</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Target: 2.5× the risk amount</span></div>
+    </div>
+    <div class="strat-card">
+      <div class="strat-title">BTST Setup (Buy Today Sell Tomorrow)</div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Stock making higher closes for 3+ days</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Today's candle closes near day's high</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Volume expanding on each up day</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>RSI between 50-65 (momentum zone)</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>No big news event tomorrow</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Entry: today's close price</span></div>
+      <div class="strat-item"><span class="strat-check">✓</span><span>Exit: always next morning's open</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Features -->
+<div class="section">
+  <div class="section-label">All Features</div>
+  <div class="section-title">Everything built into the app</div>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-title">Variable speed replay</div>
+      <div class="feat-desc">0.5× to 50× speed. Slow down to study setups, fast forward through quiet periods.</div>
+      <span class="feat-tag tag-green">Core</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Drawing tools</div>
+      <div class="feat-desc">H-Line, Support, Resistance, Trendline. All lines persist during replay. Clear all with one click.</div>
+      <span class="feat-tag tag-green">Core</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Strict mode</div>
+      <div class="feat-desc">Toggle strict mode to disable forward seeking. Forces honest practice — you can't peek at future candles.</div>
+      <span class="feat-tag tag-blue">Optional</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Bookmarks</div>
+      <div class="feat-desc">Press B to bookmark any candle with a note. Jump back to bookmarks anytime. Build your personal playbook.</div>
+      <span class="feat-tag tag-blue">Learning</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Jump to date</div>
+      <div class="feat-desc">Type a specific date and jump directly to that candle. Useful for studying specific market events.</div>
+      <span class="feat-tag tag-blue">Navigation</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Nifty context</div>
+      <div class="feat-desc">Small bar showing Nifty 50 performance each day. See if your stock moved with or against the market.</div>
+      <span class="feat-tag tag-blue">Context</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Sound effects</div>
+      <div class="feat-desc">Optional tick sound per candle. Different sounds for trade WIN and LOSS. Toggle on/off any time.</div>
+      <span class="feat-tag tag-orange">Optional</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Pattern auto-detection</div>
+      <div class="feat-desc">8 candle patterns auto-labelled as they appear. Learn to recognize patterns in real historical data.</div>
+      <span class="feat-tag tag-green">Learning</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-title">Export session</div>
+      <div class="feat-desc">Download your session trades as CSV. Review your decisions, entry reasons, and outcomes offline.</div>
+      <span class="feat-tag tag-blue">Analytics</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Keyboard shortcuts -->
+<div class="section">
+  <div class="section-label">Keyboard Shortcuts</div>
+  <div class="section-title">Master these for smooth practice</div>
+
+  <div class="kbd-grid">
+    <div class="kbd-row"><span class="kbd">Space</span><span class="kbd-desc">Play / Pause replay</span></div>
+    <div class="kbd-row"><span class="kbd">→</span><span class="kbd-desc">Step forward one candle</span></div>
+    <div class="kbd-row"><span class="kbd">←</span><span class="kbd-desc">Step back one candle</span></div>
+    <div class="kbd-row"><span class="kbd">B</span><span class="kbd-desc">Bookmark current candle</span></div>
+    <div class="kbd-row"><span class="kbd">T</span><span class="kbd-desc">Open paper trade modal</span></div>
+    <div class="kbd-row"><span class="kbd">S</span><span class="kbd-desc">Toggle strict mode</span></div>
+    <div class="kbd-row"><span class="kbd">R</span><span class="kbd-desc">Reset replay to start</span></div>
+    <div class="kbd-row"><span class="kbd">Esc</span><span class="kbd-desc">Close any open modal</span></div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- FAQ -->
+<div class="section">
+  <div class="section-label">FAQ</div>
+  <div class="section-title">Common questions</div>
+
+  <div class="faq-item">
+    <div class="faq-q">Where does the data come from?</div>
+    <div class="faq-a">Yahoo Finance — free, no login required, covers NSE India stocks going back 10+ years for daily data. Intraday data (1min, 5min) is available for the last 60 days. The app adds .NS suffix automatically for NSE stocks.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Are the paper trades real?</div>
+    <div class="faq-a">No — paper trades are completely virtual. No real money is involved. The purpose is learning and strategy testing only. Think of it as a flight simulator for trading.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Why does Heikin Ashi use real prices for trades?</div>
+    <div class="faq-a">Heikin Ashi candle prices are synthetic (calculated, not real market prices). You can't actually buy or sell at a Heikin Ashi price. So paper trade entries always use the real closing price regardless of which chart type you're viewing.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Why can't I get 1-second candle data?</div>
+    <div class="faq-a">Tick-by-tick data is not available on free APIs. The finest available from Yahoo Finance is 1-minute candles. This is actually fine for learning — even professional traders make decisions on 1-minute or 5-minute candles, not second-by-second data.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Why does intraday (1min, 5min, 15min, 1H) data fail for older dates?</div>
+    <div class="faq-a">Yahoo Finance only stores intraday data for the last 60 days. For any date older than 60 days you must use the 1D (daily) timeframe — that goes back 10+ years. The app will auto-correct your dates if you accidentally pick a range older than 60 days for intraday timeframes.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">How do I find good stocks to practice with?</div>
+    <div class="faq-a">Start with Nifty 50 stocks — RELIANCE, HDFCBANK, INFY, TCS, ICICIBANK, HDFC, TATASTEEL, SUNPHARMA, MARUTI, BAJFINANCE. These are liquid, well-traded stocks with clean chart patterns. Avoid penny stocks and very low-volume stocks.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">How long should I practice before real trading?</div>
+    <div class="faq-a">A good benchmark: complete at least 50 paper trades across different market conditions (uptrend, downtrend, sideways) and achieve a win rate above 55% with average win larger than average loss. That typically takes 3-6 months of consistent practice.</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- Backtesting -->
+<div class="section">
+  <div class="section-label">Strategy Backtesting</div>
+  <div class="section-title">Test your strategy on historical data — automatically</div>
+  <div class="section-sub">Build entry conditions visually, set exit rules, and see how the strategy would have performed on years of real NSE data.</div>
+
+  <div class="what-grid">
+    <div class="what-card">
+      <div class="what-title">Visual strategy builder</div>
+      <div class="what-desc">No coding needed. Add conditions using dropdowns — RSI less than 45, MACD crossed above signal, Price above EMA 50. Combine as many conditions as you want.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-title">Runs in seconds</div>
+      <div class="what-desc">Enter a stock symbol and date range. The engine tests every trading day, fires signals where conditions match, simulates entry at next day open, exits at SL/target.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-title">Complete results</div>
+      <div class="what-desc">Win rate, total P&L, avg win/loss, max drawdown, expectancy, equity curve chart, monthly P&L chart, full trade list with every entry and exit.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-title">Auto verdict</div>
+      <div class="what-desc">55%+ win rate with positive expectancy → "Strategy has edge." Below 45% → "Needs improvement." Takes the guesswork out of evaluating results.</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px">
+    <div class="section-label" style="margin-bottom:10px">Available conditions</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:13px">
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">RSI (14) — less than / greater than / between</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">MACD — crossed above/below signal line</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">Price vs EMA — above/below EMA 20/50/200</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">EMA Crossover — fast EMA crossed above slow EMA</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">Volume — greater than N× 10-day average</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">Bollinger Band — above upper / below lower / inside</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">ADX — greater than 20/25 (trend strength)</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">Near 52W High — price within N% of 52-week high</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">Candle Color — today green / today red</div>
+      <div style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px">Consecutive Closes — N days of higher closes in a row</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 20px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Recommended workflow</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.8">
+      1. <strong style="color:var(--text)">Backtest first</strong> — does the strategy have a positive edge historically?<br>
+      2. <strong style="color:var(--text)">Chart replay second</strong> — does it make sense visually on real candles?<br>
+      3. <strong style="color:var(--text)">Paper trade live</strong> — does it hold up in current market conditions?<br>
+      4. <strong style="color:var(--text)">Live trade small</strong> — only after consistent paper trade results.
+    </div>
+  </div>
+
+  <div style="margin-top:16px">
+    <a href="/backtest" class="btn-primary">Open backtest</a>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta">
+  <h2>Ready to start practicing?</h2>
+  <p>Pick a stock, select a date range, and watch the market come alive.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="/replay"   class="btn-primary">Open replay</a>
+    <a href="/backtest" class="btn-ghost">Backtest</a>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wallet — Chart Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;
+  --border:#30363d;--text:#e6edf3;--muted:#7d8590;
+  --green:#3fb950;--blue:#58a6ff;--orange:#d29922;
+  --red:#f85149;--purple:#bc8cff;
+  --green-bg:#0d2e0d;--red-bg:#2e0d0d;--blue-bg:#0d1f3c;
+  --radius:6px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:46px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:4px}
+.nav-link:hover,.nav-link.active{background:var(--surface2);color:var(--text)}
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.stat-val{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--text);line-height:1}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:hover td{background:var(--surface2)}
+td{padding:7px 10px;white-space:nowrap;font-family:var(--mono)}
+.badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px}
+.bg{background:var(--green-bg);color:var(--green)}
+.br{background:var(--red-bg);color:var(--red)}
+.bm{background:var(--surface2);color:var(--muted)}
+.bb{background:var(--blue-bg);color:var(--blue)}
+.pos{color:var(--green)}.neg{color:var(--red)}
+input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none}
+input:focus{border-color:var(--blue)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{opacity:.85}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+#toast{position:fixed;bottom:16px;right:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-size:12px;display:none;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#toast.show{display:block}
+</style>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-brand">ChartReplay</a>
+  <a href="/"         class="nav-link">Help</a>
+  <a href="/replay"   class="nav-link">Replay</a>
+  <a href="/backtest" class="nav-link">Backtest</a>
+  <a href="/analysis" class="nav-link">Analysis</a>
+  <a href="/history"  class="nav-link">History</a>
+  <a href="/wallet"   class="nav-link active">Wallet</a>
+</nav>
+
+<main>
+  <div style="margin-bottom:20px">
+    <div class="page-title">Wallet &amp; charges</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:2px">Funds, transaction ledger, and Groww charges on every trade — balance is net of all charges.</div>
+  </div>
+
+  <!-- Balance cards -->
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-label">Available Balance</div><div class="stat-val" id="w-balance" style="color:var(--green)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Locked (open trades)</div><div class="stat-val" id="w-locked" style="color:var(--orange)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Total Deposited</div><div class="stat-val" id="w-deposited">—</div></div>
+    <div class="stat-box"><div class="stat-label">Net Realized P&amp;L</div><div class="stat-val" id="w-net">—</div></div>
+    <div class="stat-box"><div class="stat-label">Total Charges Paid</div><div class="stat-val" id="w-charges" style="color:var(--red)">—</div></div>
+  </div>
+
+  <!-- Deposit -->
+  <div class="card">
+    <div class="card-title">Add Funds</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input type="number" id="dep-amt" placeholder="Amount ₹" step="1000" style="width:180px">
+      <button class="btn btn-primary" onclick="deposit()">+ Deposit</button>
+      <button class="btn" style="border-color:var(--border);color:var(--muted);background:transparent" onclick="quick(50000)">+50k</button>
+      <button class="btn" style="border-color:var(--border);color:var(--muted);background:transparent" onclick="quick(100000)">+1L</button>
+      <span style="font-size:12px;color:var(--muted);margin-left:6px">Opening a trade blocks its cost; closing returns capital ± P&amp;L − charges.</span>
+    </div>
+  </div>
+
+  <!-- Open positions -->
+  <div class="card" id="open-card" style="display:none">
+    <div class="card-title">Open Positions — capital locked</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Symbol</th><th>Seg</th><th>Side</th><th>Entry</th><th>Qty</th><th>Position</th><th>Margin locked</th><th></th></tr></thead>
+        <tbody id="open-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="g2">
+    <!-- Ledger -->
+    <div class="card">
+      <div class="card-title">Transaction Ledger</div>
+      <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Symbol</th><th>Amount</th><th>Balance</th></tr></thead>
+          <tbody id="ledger-tbody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Monthly charges -->
+    <div class="card">
+      <div class="card-title">Monthly Charges &amp; Tax</div>
+      <canvas id="monthly-chart" height="150"></canvas>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table>
+          <thead><tr><th>Month</th><th>Trades</th><th>Charges</th><th>STT</th><th>GST</th><th>Net P&amp;L</th></tr></thead>
+          <tbody id="monthly-tbody"><tr><td colspan="6" class="empty">—</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-trade charges -->
+  <div class="card">
+    <div class="card-title">Charges &amp; Tax per Trade</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Exit Date</th><th>Symbol</th><th>Seg</th><th>Side</th>
+            <th>Entry</th><th>Exit</th><th>Qty</th><th>Gross</th>
+            <th>Brokerage</th><th>STT</th><th>Stamp</th><th>Exch</th>
+            <th>SEBI</th><th>IPFT</th><th>DP</th><th>GST</th>
+            <th>Total Chg</th><th>Net P&amp;L</th>
+          </tr>
+        </thead>
+        <tbody id="trades-tbody"><tr><td colspan="18" class="empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const INR = v => (v>=0?'':'-')+'₹'+Math.abs(v||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+const signColor = v => v>=0 ? 'var(--green)' : 'var(--red)';
+
+function toast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.style.borderColor=type==='error'?'var(--red)':type==='success'?'var(--green)':'var(--border)';
+  el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+async function loadWallet(){
+  const r = await fetch('/api/wallet');
+  const d = await r.json();
+  const s = d.summary;
+  document.getElementById('w-balance').textContent   = INR(s.balance);
+  document.getElementById('w-locked').textContent    = INR(s.locked);
+  document.getElementById('w-deposited').textContent = INR(s.deposited);
+  const net = document.getElementById('w-net');
+  net.textContent = INR(s.net_realized); net.style.color = signColor(s.net_realized);
+  document.getElementById('w-charges').textContent   = INR(s.total_charges);
+
+  // Ledger
+  const lb = document.getElementById('ledger-tbody');
+  if(!d.ledger.length){ lb.innerHTML='<tr><td colspan="5" class="empty">No transactions yet — add funds to start</td></tr>'; }
+  else {
+    const typeBadge = t => t==='DEPOSIT'?'bb':t==='TRADE_CLOSE'?'bg':t==='TRADE_OPEN'?'bm':'br';
+    lb.innerHTML = d.ledger.map(x => `<tr>
+      <td style="color:var(--muted)">${(x.created_at||'').split('.')[0]}</td>
+      <td><span class="badge ${typeBadge(x.type)}">${x.type.replace('TRADE_','')}</span></td>
+      <td>${x.symbol||'—'}</td>
+      <td style="color:${signColor(x.amount)}">${INR(x.amount)}</td>
+      <td>${INR(x.balance)}</td>
+    </tr>`).join('');
+  }
+
+  // Open positions
+  const oc = document.getElementById('open-card');
+  const ob = document.getElementById('open-tbody');
+  if(d.open && d.open.length){
+    oc.style.display='';
+    ob.innerHTML = d.open.map(p => `<tr>
+      <td style="font-weight:500">${p.symbol}</td>
+      <td><span class="badge bm">${p.segment}</span></td>
+      <td><span class="badge ${p.side==='short'?'br':'bg'}">${(p.side||'long').toUpperCase()}</span></td>
+      <td>₹${p.entry_price}</td>
+      <td>${p.qty}</td>
+      <td style="color:var(--muted)">${INR(p.cost)}</td>
+      <td style="color:var(--orange)">${INR(p.blocked)}</td>
+      <td><button class="btn" style="border-color:var(--red);color:var(--red);background:transparent;padding:3px 10px;font-size:11px" onclick="cancelPos(${p.id})">Cancel · release</button></td>
+    </tr>`).join('');
+  } else {
+    oc.style.display='none';
+  }
+
+  await loadCharges();
+}
+
+async function cancelPos(id){
+  const r = await fetch('/api/wallet/cancel-trade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trade_id:id})});
+  const d = await r.json();
+  if(d.error){ toast(d.error,'error'); return; }
+  toast('Position cancelled — capital released','success');
+  loadWallet();
+}
+
+async function loadCharges(){
+  const r = await fetch('/api/wallet/charges');
+  const d = await r.json();
+
+  // Monthly table + chart
+  const mb = document.getElementById('monthly-tbody');
+  if(!d.monthly.length){ mb.innerHTML='<tr><td colspan="6" class="empty">No closed trades yet</td></tr>'; }
+  else {
+    mb.innerHTML = d.monthly.map(m => `<tr>
+      <td>${m.month}</td><td>${m.trades}</td>
+      <td style="color:var(--red)">${INR(m.charges)}</td>
+      <td>${INR(m.stt)}</td><td>${INR(m.gst)}</td>
+      <td style="color:${signColor(m.net_pl)}">${INR(m.net_pl)}</td>
+    </tr>`).join('');
+
+    const ctx = document.getElementById('monthly-chart').getContext('2d');
+    if(window._mc) window._mc.destroy();
+    window._mc = new Chart(ctx,{
+      type:'bar',
+      data:{labels:d.monthly.map(m=>m.month),datasets:[
+        {label:'Charges',data:d.monthly.map(m=>m.charges),backgroundColor:'rgba(248,81,73,.7)',borderRadius:3},
+        {label:'Net P&L',data:d.monthly.map(m=>m.net_pl),backgroundColor:'rgba(63,185,80,.7)',borderRadius:3},
+      ]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#7d8590',font:{size:10}}}},
+        scales:{x:{ticks:{color:'#7d8590',font:{size:10}},grid:{color:'#21262d'}},
+                y:{grid:{color:'#21262d'},ticks:{color:'#7d8590',callback:v=>'₹'+v}}}}
+    });
+  }
+
+  // Per-trade table
+  const tb = document.getElementById('trades-tbody');
+  if(!d.trades.length){ tb.innerHTML='<tr><td colspan="18" class="empty">No closed trades yet — place and close a trade in Replay</td></tr>'; return; }
+  tb.innerHTML = d.trades.map(t => `<tr>
+    <td style="color:var(--muted)">${t.exit_date||'—'}</td>
+    <td style="font-weight:500">${t.symbol}</td>
+    <td><span class="badge bm">${t.segment}</span></td>
+    <td><span class="badge ${t.side==='short'?'br':'bg'}">${(t.side||'long').toUpperCase()}</span></td>
+    <td>₹${t.entry_price}</td>
+    <td>₹${t.exit_price??'—'}</td>
+    <td>${t.qty}</td>
+    <td style="color:${signColor(t.gross_pl)}">${INR(t.gross_pl)}</td>
+    <td>${INR(t.brokerage)}</td>
+    <td>${INR(t.stt)}</td>
+    <td>${INR(t.stamp)}</td>
+    <td>${INR(t.exchange_txn)}</td>
+    <td>${INR(t.sebi)}</td>
+    <td>${INR(t.ipft)}</td>
+    <td>${INR(t.dp)}</td>
+    <td>${INR(t.gst)}</td>
+    <td style="color:var(--red)">${INR(t.total_charges)}</td>
+    <td style="color:${signColor(t.net_pl)};font-weight:600">${INR(t.net_pl)}</td>
+  </tr>`).join('');
+}
+
+async function deposit(){
+  const amt = parseFloat(document.getElementById('dep-amt').value);
+  if(!amt || amt<=0){ toast('Enter a positive amount','error'); return; }
+  const r = await fetch('/api/wallet/deposit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amt})});
+  const d = await r.json();
+  if(d.error){ toast(d.error,'error'); return; }
+  document.getElementById('dep-amt').value='';
+  toast('Deposited '+INR(amt),'success');
+  loadWallet();
+}
+function quick(v){ document.getElementById('dep-amt').value=v; deposit(); }
+
+loadWallet();
+</script>
+</body>
+</html>

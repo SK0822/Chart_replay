@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session History — Chart Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;
+  --border:#30363d;--text:#e6edf3;--muted:#7d8590;
+  --green:#3fb950;--blue:#58a6ff;--orange:#d29922;
+  --red:#f85149;--purple:#bc8cff;
+  --green-bg:#0d2e0d;--red-bg:#2e0d0d;--blue-bg:#0d1f3c;
+  --radius:6px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:46px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:4px}
+.nav-link:hover,.nav-link.active{background:var(--surface2);color:var(--text)}
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.stat-val{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--text);line-height:1}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:hover td{background:var(--surface2)}
+td{padding:7px 10px;white-space:nowrap;font-family:var(--mono)}
+.badge{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px}
+.bg{background:var(--green-bg);color:var(--green)}
+.br{background:var(--red-bg);color:var(--red)}
+.bm{background:var(--surface2);color:var(--muted)}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-brand">ChartReplay</a>
+  <a href="/"         class="nav-link">Help</a>
+  <a href="/replay"   class="nav-link">Replay</a>
+  <a href="/backtest" class="nav-link">Backtest</a>
+  <a href="/analysis" class="nav-link">Analysis</a>
+  <a href="/history"  class="nav-link active">History</a>
+  <a href="/wallet"   class="nav-link">Wallet</a>
+</nav>
+
+<main>
+  <div style="margin-bottom:20px">
+    <div class="page-title">Session history</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:2px">All paper trades across every replay session, stored permanently.</div>
+  </div>
+
+  <!-- Overall stats -->
+  <div class="stat-grid" id="stat-grid">
+    <div class="stat-box"><div class="stat-label">Total Trades</div><div class="stat-val" id="st-total">—</div></div>
+    <div class="stat-box"><div class="stat-label">Win Rate</div><div class="stat-val" id="st-wr" style="color:var(--green)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Total P&L</div><div class="stat-val" id="st-pl">—</div></div>
+    <div class="stat-box"><div class="stat-label">Avg Win</div><div class="stat-val" id="st-aw" style="color:var(--green)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Avg Loss</div><div class="stat-val" id="st-al" style="color:var(--red)">—</div></div>
+    <div class="stat-box"><div class="stat-label">Avg Score</div><div class="stat-val" id="st-sc" style="color:var(--blue)">—</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Monthly P&L</div>
+      <canvas id="monthly-chart" height="140"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Symbols</div>
+      <div id="symbol-table"></div>
+    </div>
+  </div>
+
+  <!-- Sessions -->
+  <div class="card">
+    <div class="card-title">Recent Sessions</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Symbol</th><th>Timeframe</th>
+            <th>Date Range</th><th>Trades</th><th>Wins</th>
+            <th>Losses</th><th>P&L</th><th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="sessions-tbody">
+          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- All trades -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">All Trades</div>
+      <input type="text" id="filter-sym" placeholder="Filter by symbol..."
+             style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;color:var(--text);font-size:12px;width:180px;outline:none"
+             oninput="filterTrades(this.value)">
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Symbol</th><th>Strategy</th>
+            <th>Entry ₹</th><th>Exit ₹</th><th>Qty</th>
+            <th>P&L ₹</th><th>P&L %</th><th>Result</th>
+            <th>Score</th><th>Entry Date</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="trades-tbody">
+          <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let allTrades = [];
+
+async function loadHistory(){
+  const r    = await fetch('/api/history/stats');
+  const data = await r.json();
+
+  // Overall stats
+  const s = data.overall;
+  if(s.total_trades){
+    document.getElementById('st-total').textContent = s.total_trades;
+    document.getElementById('st-wr').textContent    = s.win_rate + '%';
+    document.getElementById('st-wr').style.color    = s.win_rate >= 55 ? 'var(--green)' : s.win_rate >= 45 ? 'var(--orange)' : 'var(--red)';
+    const pl = s.total_pl || 0;
+    document.getElementById('st-pl').textContent    = (pl>=0?'+':'')+'₹'+pl.toLocaleString('en-IN');
+    document.getElementById('st-pl').style.color    = pl >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('st-aw').textContent    = '+₹'+(s.avg_win||0);
+    document.getElementById('st-al').textContent    = '₹'+(s.avg_loss||0);
+    document.getElementById('st-sc').textContent    = (s.avg_score||0)+'/100';
+  }
+
+  // Monthly chart
+  if(data.monthly.length){
+    const months = data.monthly.map(m=>m.month);
+    const vals   = data.monthly.map(m=>m.pl);
+    new Chart(document.getElementById('monthly-chart').getContext('2d'), {
+      type:'bar',
+      data:{labels:months,datasets:[{data:vals,
+        backgroundColor:vals.map(v=>v>=0?'rgba(63,185,80,.7)':'rgba(248,81,73,.7)'),
+        borderRadius:3}]},
+      options:{responsive:true,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#7d8590',font:{size:10}},grid:{color:'#21262d'}},
+                y:{grid:{color:'#21262d'},ticks:{color:'#7d8590',callback:v=>'₹'+v}}}}
+    });
+  }
+
+  // Symbol breakdown
+  const symEl = document.getElementById('symbol-table');
+  if(data.symbols.length){
+    symEl.innerHTML = '<table style="width:100%;font-size:12px">'
+      + '<thead><tr><th style="padding:4px 8px;color:var(--muted)">Symbol</th><th style="padding:4px 8px;color:var(--muted)">Trades</th><th style="padding:4px 8px;color:var(--muted)">Win%</th><th style="padding:4px 8px;color:var(--muted)">P&L</th></tr></thead><tbody>'
+      + data.symbols.map(s => {
+          const wr = s.trades > 0 ? Math.round(s.wins/s.trades*100) : 0;
+          const pl = s.total_pl || 0;
+          return `<tr>
+            <td style="padding:4px 8px;font-weight:500">${s.symbol}</td>
+            <td style="padding:4px 8px">${s.trades}</td>
+            <td style="padding:4px 8px;color:${wr>=55?'var(--green)':wr>=45?'var(--orange)':'var(--red)'}">${wr}%</td>
+            <td style="padding:4px 8px;color:${pl>=0?'var(--green)':'var(--red)'}">${pl>=0?'+':''}₹${pl}</td>
+          </tr>`;
+        }).join('')
+      + '</tbody></table>';
+  }
+
+  // Sessions
+  const tbody = document.getElementById('sessions-tbody');
+  if(data.sessions.length){
+    tbody.innerHTML = data.sessions.map((s,i) => {
+      const pl = s.total_pl || 0;
+      return `<tr>
+        <td style="color:var(--muted)">${i+1}</td>
+        <td style="font-weight:500">${s.symbol}</td>
+        <td>${s.timeframe}</td>
+        <td>${s.from_date} → ${s.to_date}</td>
+        <td>${s.trade_count||0}</td>
+        <td style="color:var(--green)">${s.wins||0}</td>
+        <td style="color:var(--red)">${s.losses||0}</td>
+        <td style="color:${pl>=0?'var(--green)':'var(--red)'}">${pl>=0?'+':''}₹${pl||0}</td>
+        <td style="color:var(--muted)">${s.created_at?.split('T')[0]||s.created_at?.split(' ')[0]||'—'}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No sessions yet — start a replay session and place paper trades</td></tr>';
+  }
+
+  // All trades
+  const tr = await fetch('/api/history/trades');
+  allTrades = await tr.json();
+  renderTrades(allTrades);
+}
+
+function renderTrades(trades){
+  const tbody = document.getElementById('trades-tbody');
+  if(!trades.length){
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No trades yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = trades.map((t,i) => {
+    const pl  = t.pl_rs || 0;
+    const pct = t.pl_pct || 0;
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:500">${t.symbol}</td>
+      <td><span class="badge bm">${t.strategy||'swing'}</span></td>
+      <td>₹${t.entry_price}</td>
+      <td>₹${t.exit_price||'—'}</td>
+      <td>${t.qty}</td>
+      <td style="color:${pl>=0?'var(--green)':'var(--red)'}">${pl>=0?'+':''}₹${pl}</td>
+      <td style="color:${pct>=0?'var(--green)':'var(--red)'}">${pct>=0?'+':''}${pct}%</td>
+      <td><span class="badge ${t.result==='WIN'?'bg':t.result==='LOSS'?'br':'bm'}">${t.result||'OPEN'}</span></td>
+      <td style="color:var(--blue)">${t.entry_score!=null?t.entry_score+'/100':'—'}</td>
+      <td style="color:var(--muted)">${t.entry_date||'—'}</td>
+      <td style="color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis">${t.notes||''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTrades(val){
+  const filtered = val
+    ? allTrades.filter(t => t.symbol.includes(val.toUpperCase()))
+    : allTrades;
+  renderTrades(filtered);
+}
+
+loadHistory();
+</script>
+</body>
+</html>

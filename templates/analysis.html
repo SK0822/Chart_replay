@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Technical Analysis — Chart Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;
+  --border:#30363d;--text:#e6edf3;--muted:#7d8590;
+  --green:#3fb950;--blue:#58a6ff;--orange:#d29922;
+  --red:#f85149;--purple:#bc8cff;
+  --green-bg:#0d2e0d;--red-bg:#2e0d0d;--blue-bg:#0d1f3c;
+  --radius:6px;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:46px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
+.nav-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav-link{font-size:12px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:4px}
+.nav-link:hover,.nav-link.active{background:var(--surface2);color:var(--text)}
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.search-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.search-bar input,.search-bar select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:14px;font-family:var(--font);outline:none}
+.search-bar input{width:180px;font-family:var(--mono);text-transform:uppercase}
+.search-bar input:focus,.search-bar select:focus{border-color:var(--blue)}
+.btn-primary{background:var(--blue);color:#fff;border:none;border-radius:var(--radius);padding:8px 18px;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font)}
+.btn-primary:hover{opacity:.85}
+.layout{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.verdict-box{border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.v-label{font-size:18px;font-weight:700}
+.v-sub{font-size:12px;opacity:.8}
+.trend-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.trend-row:last-child{border:none}
+.trend-key{color:var(--muted)}
+.trend-val{font-family:var(--mono);font-weight:500}
+.sr-item{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:4px;margin-bottom:3px;font-size:12px}
+.sr-price{font-family:var(--mono);font-weight:600}
+.sr-strength{font-size:10px;color:var(--muted)}
+.pat-item{padding:10px 12px;border-radius:var(--radius);margin-bottom:6px;border:1px solid var(--border)}
+.pat-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.pat-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.pat-conf{font-size:11px;font-weight:500;margin-top:4px}
+.conf-bar{height:4px;background:var(--border);border-radius:2px;margin-top:4px}
+.conf-fill{height:100%;border-radius:2px}
+.fund-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.fund-row:last-child{border:none}
+.fund-key{color:var(--muted)}
+.fund-val{font-family:var(--mono);font-weight:500;color:var(--text)}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.badge-bull{background:var(--green-bg);color:var(--green)}
+.badge-bear{background:var(--red-bg);color:var(--red)}
+.badge-neu{background:var(--surface2);color:var(--muted)}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.spinner{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:none;text-align:center;padding:40px;color:var(--muted)}
+.loading.show{display:block}
+#chart-area{height:380px;border-radius:0 0 var(--radius) var(--radius)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-brand">ChartReplay</a>
+  <a href="/"         class="nav-link">Help</a>
+  <a href="/replay"   class="nav-link">Replay</a>
+  <a href="/backtest" class="nav-link">Backtest</a>
+  <a href="/analysis" class="nav-link active">Analysis</a>
+  <a href="/history"  class="nav-link">History</a>
+  <a href="/wallet"   class="nav-link">Wallet</a>
+</nav>
+
+<main>
+  <div style="margin-bottom:16px">
+    <div class="page-title">Technical analysis</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:2px">Auto-detect trend, support &amp; resistance, chart patterns, and fundamentals.</div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="sym" value="{{ symbol }}" placeholder="RELIANCE"
+           oninput="this.value=this.value.toUpperCase()">
+    <select id="tf" onchange="showDateLimits()">
+      <option value="1D">1D — Daily</option>
+      <option value="1H">1H — Hourly</option>
+      <option value="15min">15 min</option>
+      <option value="5min">5 min</option>
+    </select>
+    <input type="date" id="from-date" title="From date (leave blank for auto)">
+    <input type="date" id="to-date"   title="To date (leave blank = today)">
+    <button class="btn-primary" onclick="analyse()">Analyse</button>
+    <span id="status" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+
+  <!-- Date range limits info bar -->
+  <div id="date-limits" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.8">
+    <strong style="color:var(--text)">Yahoo Finance data limits by timeframe:</strong><br>
+    <span style="color:var(--blue)">1D (Daily)</span> — up to 10 years of history &nbsp;·&nbsp;
+    <span style="color:var(--blue)">1H (Hourly)</span> — last 2 years &nbsp;·&nbsp;
+    <span style="color:var(--blue)">15min</span> — last 60 days &nbsp;·&nbsp;
+    <span style="color:var(--blue)">5min</span> — last 60 days &nbsp;·&nbsp;
+    <span style="color:var(--blue)">1min</span> — last 30 days<br>
+    <span style="color:var(--muted)">Leave dates blank to auto-select the maximum available range for the chosen timeframe.</span>
+  </div>
+
+  <div class="loading" id="loader"><div class="spinner"></div>Analysing...</div>
+
+  <div id="results" style="display:none">
+    <div class="layout">
+
+      <!-- Left: Chart + Patterns -->
+      <div>
+        <!-- Verdict -->
+        <div class="verdict-box" id="verdict-box">
+          <div>
+            <div class="v-label" id="v-label">—</div>
+            <div class="v-sub"  id="v-sub">—</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:24px;font-weight:700;font-family:var(--mono)" id="v-price">—</div>
+            <div style="font-size:12px;margin-top:2px" id="v-rsi">RSI —</div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="chart-area"></div>
+        </div>
+
+        <!-- Chart patterns -->
+        <div class="card">
+          <div class="card-title">Chart Patterns Detected</div>
+          <div id="patterns-list"><div style="color:var(--muted);font-size:12px">Run analysis to detect patterns</div></div>
+        </div>
+      </div>
+
+      <!-- Right: Trend + S/R + Fundamentals -->
+      <div>
+
+        <!-- Trend analysis -->
+        <div class="card">
+          <div class="card-title">Trend Analysis</div>
+          <div id="trend-panel"><div style="color:var(--muted);font-size:12px">—</div></div>
+        </div>
+
+        <!-- Support/Resistance -->
+        <div class="card">
+          <div class="card-title">Resistance Levels</div>
+          <div id="resistance-list"></div>
+          <div class="card-title" style="margin-top:12px">Support Levels</div>
+          <div id="support-list"></div>
+        </div>
+
+        <!-- Fundamentals -->
+        <div class="card">
+          <div class="card-title">Fundamentals</div>
+          <div id="fund-panel"><div style="color:var(--muted);font-size:12px">Loading...</div></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="empty" id="empty">
+    <div style="font-size:16px;font-weight:500;margin-bottom:8px;color:var(--text)">Enter a symbol and select Analyse</div>
+    <div style="font-size:13px">Get trend, support &amp; resistance, chart patterns, and fundamentals for any NSE stock.</div>
+  </div>
+</main>
+
+<script>
+let chart = null;
+
+function initChart(){
+  const el = document.getElementById('chart-area');
+  chart = LightweightCharts.createChart(el, {
+    autoSize: true,
+    height: 380,
+    layout: {background:{color:'#161b22'}, textColor:'#7d8590'},
+    grid:   {vertLines:{color:'#21262d'}, horzLines:{color:'#21262d'}},
+    crosshair: {mode:1},
+    timeScale: {borderColor:'#30363d', timeVisible:true, barSpacing:6},
+    rightPriceScale: {borderColor:'#30363d'},
+    handleScroll: {mouseWheel:true, pressedMouseMove:true},
+    handleScale:  {mouseWheel:true, pinch:true},
+  });
+}
+
+async function analyse(){
+  const sym = document.getElementById('sym').value.trim().toUpperCase();
+  const tf  = document.getElementById('tf').value;
+  if(!sym){ alert('Enter a symbol'); return; }
+
+  document.getElementById('loader').classList.add('show');
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('empty').style.display   = 'none';
+  document.getElementById('status').textContent    = 'Analysing ' + sym + '...';
+
+  // Fetch TA and fundamentals in parallel
+  const fromDate = document.getElementById('from-date').value;
+  const toDate   = document.getElementById('to-date').value;
+
+  // Build date params — only pass if user explicitly set them
+  const dateParams = (fromDate ? '&from_date='+fromDate : '') +
+                     (toDate   ? '&to_date='+toDate     : '');
+
+  const [taRes, fundRes] = await Promise.all([
+    fetch('/api/ta?symbol='+sym+'&timeframe='+tf+dateParams).then(r=>r.json()),
+    fetch('/api/fundamentals?symbol='+sym).then(r=>r.json()),
+  ]);
+
+  document.getElementById('loader').classList.remove('show');
+  document.getElementById('results').style.display = '';
+  document.getElementById('status').textContent = '';
+
+  if(taRes.error){
+    // Show error inline instead of alert
+    document.getElementById('results').innerHTML =
+      '<div style="background:#2e0d0d;border:1px solid var(--red);border-radius:6px;padding:14px 16px;color:var(--red);font-size:13px;line-height:1.7">'
+      + '<strong>⚠ Error</strong><br>' + taRes.error
+      + '</div>';
+    document.getElementById('results').style.display = '';
+    return;
+  }
+
+  renderTA(taRes);
+  renderFundamentals(fundRes);
+}
+
+function renderTA(d){
+  // Verdict
+  const vb = document.getElementById('verdict-box');
+  vb.style.background = d.verdict.color + '20';
+  vb.style.border = '1px solid ' + d.verdict.color + '60';
+  document.getElementById('v-label').textContent = d.verdict.label;
+  document.getElementById('v-label').style.color = d.verdict.color;
+  document.getElementById('v-sub').textContent   = d.symbol + ' · ' + d.timeframe + ' · ' + d.candle_count + ' candles analysed';
+  document.getElementById('v-price').textContent = '₹' + d.last_close;
+  document.getElementById('v-price').style.color = d.verdict.color;
+  if(d.rsi){
+    const rsiEl = document.getElementById('v-rsi');
+    rsiEl.textContent = 'RSI ' + d.rsi + (d.rsi > 70 ? ' — Overbought' : d.rsi < 30 ? ' — Oversold' : ' — Neutral');
+    rsiEl.style.color = d.rsi > 70 ? 'var(--red)' : d.rsi < 30 ? 'var(--green)' : 'var(--muted)';
+  }
+
+  // Chart
+  renderChart(d);
+
+  // Trend
+  const t = d.trend;
+  document.getElementById('trend-panel').innerHTML = `
+    <div class="trend-row"><span class="trend-key">Direction</span>
+      <span class="trend-val" style="color:${t.color}">${t.emoji} ${t.direction.toUpperCase()}</span></div>
+    <div class="trend-row"><span class="trend-key">Price Change</span>
+      <span class="trend-val" style="color:${t.price_change>=0?'var(--green)':'var(--red)'}">${t.price_change>=0?'+':''}${t.price_change}%</span></div>
+    <div class="trend-row"><span class="trend-key">Above EMA 20</span>
+      <span class="trend-val" style="color:${t.above_ema20?'var(--green)':'var(--red)'}">${t.above_ema20?'✓ Yes':'✗ No'} (₹${t.ema20})</span></div>
+    <div class="trend-row"><span class="trend-key">Above EMA 50</span>
+      <span class="trend-val" style="color:${t.above_ema50?'var(--green)':'var(--red)'}">${t.above_ema50?'✓ Yes':'✗ No'} (₹${t.ema50})</span></div>
+    ${t.ema200 ? `<div class="trend-row"><span class="trend-key">Above EMA 200</span>
+      <span class="trend-val" style="color:${t.above_ema200?'var(--green)':'var(--red)'}">${t.above_ema200?'✓ Yes':'✗ No'} (₹${t.ema200})</span></div>` : ''}
+    <div class="trend-row"><span class="trend-key">Higher Highs</span>
+      <span class="trend-val" style="color:${t.higher_highs?'var(--green)':'var(--red)'}">${t.higher_highs?'✓ Yes':'✗ No'}</span></div>
+    <div class="trend-row"><span class="trend-key">Higher Lows</span>
+      <span class="trend-val" style="color:${t.higher_lows?'var(--green)':'var(--red)'}">${t.higher_lows?'✓ Yes':'✗ No'}</span></div>
+  `;
+
+  // Resistance
+  const resList = document.getElementById('resistance-list');
+  resList.innerHTML = d.resistance.length
+    ? d.resistance.map(r => `
+        <div class="sr-item" style="background:#f8514915;border:1px solid #f8514930">
+          <span class="sr-price" style="color:var(--red)">₹${r.price}</span>
+          <span class="sr-strength">${'★'.repeat(Math.min(r.count,5))} ${r.count} touches</span>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px">No resistance levels found</div>';
+
+  // Support
+  const supList = document.getElementById('support-list');
+  supList.innerHTML = d.support.length
+    ? d.support.map(s => `
+        <div class="sr-item" style="background:#3fb95015;border:1px solid #3fb95030">
+          <span class="sr-price" style="color:var(--green)">₹${s.price}</span>
+          <span class="sr-strength">${'★'.repeat(Math.min(s.count,5))} ${s.count} touches</span>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px">No support levels found</div>';
+
+  // Patterns
+  const patList = document.getElementById('patterns-list');
+  patList.innerHTML = d.patterns.length
+    ? d.patterns.map(p => `
+        <div class="pat-item" style="border-color:${p.color}40;background:${p.color}10">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="pat-name" style="color:${p.color}">${p.name}</span>
+            <span class="badge ${p.type==='bullish'?'badge-bull':p.type==='bearish'?'badge-bear':'badge-neu'}">${p.type}</span>
+          </div>
+          <div class="pat-desc">${p.description}</div>
+          <div class="pat-conf" style="color:${p.color}">Confidence: ${p.confidence}%</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence}%;background:${p.color}"></div></div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px">No significant patterns detected in this period</div>';
+}
+
+function renderChart(d){
+  // Always re-init chart to avoid stale container issues
+  const el = document.getElementById('chart-area');
+  el.innerHTML = '';  // clear previous chart
+  if(chart){ try{ chart.remove(); }catch(e){} chart = null; }
+  initChart();
+
+  const sym = document.getElementById('sym').value.trim().toUpperCase();
+  const tf  = document.getElementById('tf').value;
+
+  // Use custom dates if provided, else auto range
+  const now      = new Date();
+  const fromInput= document.getElementById('from-date').value;
+  const toInput  = document.getElementById('to-date').value;
+  const toDt     = toInput   || now.toISOString().split('T')[0];
+  const fromDt   = fromInput || new Date(now - (['1D'].includes(tf) ? 365 : 60) * 86400000)
+                                  .toISOString().split('T')[0];
+
+  fetch('/api/chart-data?symbol=' + sym + '&from_date=' + fromDt + '&to_date=' + toDt + '&interval=' + tf)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.error || !data.candles || !data.candles.length){
+        document.getElementById('chart-area').innerHTML =
+          '<div style="color:var(--muted);padding:20px;text-align:center">Chart data unavailable: ' + (data.error||'no candles') + '</div>';
+        return;
+      }
+
+      // Remove old series
+      try{ if(window._cs) chart.removeSeries(window._cs); }catch(e){}
+
+      window._cs = chart.addSeries(LightweightCharts.CandlestickSeries, {
+        upColor:'#3fb950', downColor:'#f85149',
+        borderUpColor:'#3fb950', borderDownColor:'#f85149',
+        wickUpColor:'#3fb950', wickDownColor:'#f85149',
+      });
+
+      window._cs.setData(data.candles);
+      setTimeout(function(){ try{ chart.timeScale().fitContent(); }catch(e){} }, 50);
+
+      // Draw S/R lines
+      if(d.resistance) d.resistance.slice(0,5).forEach(function(r){
+        try{ window._cs.createPriceLine({
+          price: r.price, color:'#f85149', lineWidth:1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true, title:'R'
+        }); }catch(e){}
+      });
+      if(d.support) d.support.slice(0,5).forEach(function(s){
+        try{ window._cs.createPriceLine({
+          price: s.price, color:'#3fb950', lineWidth:1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true, title:'S'
+        }); }catch(e){}
+      });
+
+    })
+    .catch(function(e){
+      document.getElementById('chart-area').innerHTML =
+        '<div style="color:var(--muted);padding:20px;text-align:center">Failed to load chart</div>';
+    });
+}
+
+function renderFundamentals(f){
+  if(f.error){
+    document.getElementById('fund-panel').innerHTML =
+      '<div style="color:var(--muted);font-size:12px">Fundamentals not available: ' + f.error + '</div>';
+    return;
+  }
+  const rows = [
+    ['Company',      f.name],
+    ['Sector',       f.sector],
+    ['Market Cap',   f.market_cap],
+    ['P/E Ratio',    f.pe_ratio],
+    ['P/B Ratio',    f.pb_ratio],
+    ['Revenue',      f.revenue],
+    ['Profit Margin',f.profit_margin],
+    ['ROE',          f.roe],
+    ['Debt/Equity',  f.debt_equity],
+    ['Current Ratio',f.current_ratio],
+    ['52W High',     '₹'+f['52w_high']],
+    ['52W Low',      '₹'+f['52w_low']],
+    ['Beta',         f.beta],
+    ['Dividend',     f.dividend_yield],
+  ];
+  document.getElementById('fund-panel').innerHTML =
+    rows.map(([k,v]) => `
+      <div class="fund-row">
+        <span class="fund-key">${k}</span>
+        <span class="fund-val">${v || 'N/A'}</span>
+      </div>`).join('');
+}
+
+// Show date limits info
+function showDateLimits(){
+  const tf  = document.getElementById('tf').value;
+  const el  = document.getElementById('date-limits');
+  const limits = {
+    '1D':    'Up to 10 years — any date range works',
+    '1H':    'Last 2 years only — From date must be after ' +
+              new Date(Date.now()-730*86400000).toLocaleDateString('en-IN'),
+    '15min': 'Last 60 days only — From date must be after ' +
+              new Date(Date.now()-60*86400000).toLocaleDateString('en-IN'),
+    '5min':  'Last 60 days only — From date must be after ' +
+              new Date(Date.now()-60*86400000).toLocaleDateString('en-IN'),
+  };
+  el.style.display = 'block';
+  // Highlight the current timeframe limit
+  const all = el.querySelectorAll('span[style*="color:var(--blue)"]');
+  all.forEach(s => s.style.fontWeight = 'normal');
+}
+
+// Show limits on load
+showDateLimits();
+// Init chart
+initChart();
+</script>
+</body>
+</html>
